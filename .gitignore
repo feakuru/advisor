@@ -1,4 +1,7 @@
-/.mypy_cache
-/.vscode
-/__pycache__
-/grep
+.mypy_cache
+.vscode
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.env
