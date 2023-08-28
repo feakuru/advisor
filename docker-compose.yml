@@ -1,0 +1,24 @@
+version: '3.1'
+
+services:
+
+  memory-bank:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: memory_bank_admin
+      MONGO_INITDB_ROOT_PASSWORD: superstrongpassword
+
+  memory-bank-ui:
+    image: mongo-express
+    restart: always
+    depends_on:
+      - memory-bank
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: memory_bank_admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: superstrongpassword
+      ME_CONFIG_MONGODB_URL: mongodb://memory_bank_admin:superstrongpassword@memory-bank:27017/
