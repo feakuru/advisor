@@ -7,12 +7,12 @@ name = "pypi"
 python-binance = "*"
 python-dotenv = "*"
 pymongo = {version = "*", extras = ["srv"]}
-matplotlib = "*"
-pyqt5 = "*"
 
 [dev-packages]
 mypy = "*"
 flake8 = "*"
+matplotlib = "*"
+pyqt5 = "*"
 
 [requires]
-python_version = "3.10"
+python_version = "3.11"
