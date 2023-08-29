@@ -102,10 +102,10 @@ def enrich_memory_with_stochastic_oscillators(
         updates[kline['open_time']] = {}
         if idx >= fast_period:
             prev_klines = data[idx - fast_period:idx]
-            lowest_previous = min(
+            lowest_previous: float = min(
                 prev_kline['low'] for _, prev_kline in prev_klines
             )
-            highest_previous = max(
+            highest_previous: float = max(
                 prev_kline['high'] for _, prev_kline in prev_klines
             )
             fast_stochastic_oscillator = (
