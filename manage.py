@@ -3,7 +3,9 @@ import sys
 
 from binance import Client
 
+from advisors.regression import RegressionAdvisor
 from common.utils import get_logger
+from databuilders.pd import PandasMemoryDatabuilder
 from gatherers.enrich_memory import enrich_memory, check_targets
 from gatherers.fill_memory import get_history
 from gatherers.get_memory_stats import log_memory_stats
@@ -19,6 +21,7 @@ class ManagementCommands(enum.Enum):
     CHECK = 'check'
     HISTORY = 'history'
     PLOT = 'plot'
+    TRAIN = 'train'
 
 
 if __name__ == '__main__':
@@ -50,3 +53,9 @@ if __name__ == '__main__':
 
         case ManagementCommands.PLOT.value:
             MemoryPlotter().get_plot().show()
+
+        case ManagementCommands.TRAIN.value:
+            advisor = RegressionAdvisor()
+            databuilder = PandasMemoryDatabuilder(memory_bank)
+            advisor.set_dataset(databuilder.get_data())
+            advisor.train()
