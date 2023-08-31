@@ -5,7 +5,7 @@ from common.utils import get_logger
 from memory_bank.client import MemoryBankClient
 
 
-logger = get_logger(__name__)
+logger = get_logger('gatherer-enrich')
 
 
 UpdatesType = t.Dict[str, t.Dict[str, t.Any]]

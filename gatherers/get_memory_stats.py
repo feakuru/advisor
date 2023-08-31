@@ -4,7 +4,7 @@ from common.utils import get_logger
 from memory_bank.client import MemoryBankClient
 
 
-logger = get_logger(__name__)
+logger = get_logger('gatherer-stats')
 
 
 def log_memory_stats(

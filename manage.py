@@ -3,13 +3,7 @@ import sys
 
 from binance import Client
 
-from advisors.regression import RegressionAdvisor
 from common.utils import get_logger
-from databuilders.pd import PandasMemoryDatabuilder
-from gatherers.enrich_memory import enrich_memory, check_targets
-from gatherers.fill_memory import get_history
-from gatherers.get_memory_stats import log_memory_stats
-from plotters.memory import MemoryPlotter
 from memory_bank.client import MemoryBankClient
 
 
@@ -38,13 +32,20 @@ if __name__ == '__main__':
 
     match cmd:
         case ManagementCommands.ENRICH.value:
+            from gatherers.enrich_memory import enrich_memory
+
             enrich_memory()
 
         case ManagementCommands.CHECK.value:
+            from gatherers.get_memory_stats import log_memory_stats
+            from gatherers.enrich_memory import enrich_memory, check_targets
+
             log_memory_stats(log_full_stats='--full' in args)
             check_targets(log_full_stats='--full' in args)
 
         case ManagementCommands.HISTORY.value:
+            from gatherers.fill_memory import get_history
+
             get_history(
                 api_client=api_client,
                 memory_bank=memory_bank,
@@ -52,9 +53,14 @@ if __name__ == '__main__':
             )
 
         case ManagementCommands.PLOT.value:
+            from plotters.memory import MemoryPlotter
+
             MemoryPlotter().get_plot().show()
 
         case ManagementCommands.TRAIN.value:
+            from advisors.regression import RegressionAdvisor
+            from databuilders.pd import PandasMemoryDatabuilder
+
             advisor = RegressionAdvisor()
             databuilder = PandasMemoryDatabuilder(memory_bank)
             advisor.set_dataset(databuilder.get_data())

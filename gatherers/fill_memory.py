@@ -5,7 +5,7 @@ from config import config
 from memory_bank.client import MemoryBankClient
 
 
-logger = get_logger(__name__)
+logger = get_logger('gatherer-fill')
 
 
 def get_history(
