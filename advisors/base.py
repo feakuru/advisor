@@ -35,17 +35,17 @@ class BaseAdvisor:
                 ),
                 go.Scatter(
                     y=history.history['val_loss'],
-                    name='Loss value',
+                    name='Validation loss',
                 ),
             ]
         ).show()
 
-    def fit_model(self):
+    def fit_model(self, epochs: int = 100):
         logger.info('Model is created:\n%s', self.model.summary())
         history = self.model.fit(
             self.train_features,
             self.train_labels,
-            epochs=100,
+            epochs=epochs,
             validation_split=0.2,
         )
         self.plot_loss(history)
@@ -79,8 +79,8 @@ class BaseAdvisor:
         self.train_labels = self.train_features.pop('target')
         self.test_labels = self.test_features.pop('target')
 
-    def train(self):
-        self.fit_model()
+    def train(self, epochs: int = 100):
+        self.fit_model(epochs=epochs)
         logger.info(
             'Evaluation result: %f',
             self.model.evaluate(self.test_features, self.test_labels),

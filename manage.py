@@ -27,8 +27,6 @@ if __name__ == '__main__':
         sys.exit(1)
 
     cmd, args = sys.argv[1], sys.argv[2:]
-    api_client = Client()
-    memory_bank = MemoryBankClient()
 
     match cmd:
         case ManagementCommands.ENRICH.value:
@@ -46,6 +44,8 @@ if __name__ == '__main__':
         case ManagementCommands.HISTORY.value:
             from gatherers.fill_memory import get_history
 
+            memory_bank = MemoryBankClient()
+            api_client = Client()
             get_history(
                 api_client=api_client,
                 memory_bank=memory_bank,
@@ -58,10 +58,11 @@ if __name__ == '__main__':
             MemoryPlotter().get_plot().show()
 
         case ManagementCommands.TRAIN.value:
-            from advisors.regression import RegressionAdvisor
+            from advisors.dnn import DNNAdvisor
             from databuilders.pd import PandasMemoryDatabuilder
 
-            advisor = RegressionAdvisor()
+            memory_bank = MemoryBankClient()
             databuilder = PandasMemoryDatabuilder(memory_bank)
+            advisor = DNNAdvisor()
             advisor.set_dataset(databuilder.get_data())
-            advisor.train()
+            advisor.train(epochs=int(args[0]) if args else 100)

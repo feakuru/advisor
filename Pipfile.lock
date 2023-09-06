@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "b06e977143cc925dd410af4624556116438645bc4c515fe7befbdbd041dc947d"
+            "sha256": "c4bc82886b7519629450a1b76c59c3d92002c9969e2a3f0ecd914ec2712ea000"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -1994,13 +1994,6 @@
             ],
             "markers": "platform_machine != 'arm64' or platform_system != 'Darwin'",
             "version": "==0.33.0"
-        },
-        "tensorrt": {
-            "hashes": [
-                "sha256:0ca64da500480a2d204c18d7c6791ec462c163ae4fa1db574b8c211da1116ea2"
-            ],
-            "index": "pypi",
-            "version": "==8.6.1.post1"
         },
         "termcolor": {
             "hashes": [

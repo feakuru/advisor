@@ -1,4 +1,5 @@
 import datetime
+from io import StringIO
 import json
 import pandas as pd
 
@@ -29,4 +30,4 @@ class PandasMemoryDatabuilder(BaseDatabuilder):
         return self.__memory
 
     def get_data(self) -> pd.DataFrame:
-        return pd.read_json(self.memory)
+        return pd.read_json(StringIO(self.memory))
