@@ -1,6 +1,9 @@
 '''General settings.'''
 from dataclasses import dataclass
-from dotenv import dotenv_values
+import os
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path='.env')
 
 
 @dataclass
@@ -14,4 +17,9 @@ class Config:
     SYMBOL: str = 'BTCUSDT'
 
 
-config = Config(**dotenv_values(".env"))
+config = Config(**{
+    env_key: env_value
+    for env_key, env_value in
+    os.environ.items()
+    if env_key in Config.__dataclass_fields__.keys()
+})
