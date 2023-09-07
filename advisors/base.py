@@ -1,3 +1,6 @@
+import typing as t
+from dataclasses import dataclass
+
 import pandas as pd
 import tensorflow as tf
 import plotly.graph_objects as go
@@ -8,14 +11,26 @@ from common.utils import get_logger
 logger = get_logger('advisor-base')
 
 
+@dataclass
+class BaseAdvisorParams:
+    prepared_model: tf.keras.Model | None = None
+
+
 class BaseAdvisor:
     train_dataset: pd.DataFrame
     test_dataset: pd.DataFrame
     train_features: pd.DataFrame
     test_features: pd.DataFrame
+    params_class: t.Type[BaseAdvisorParams] = BaseAdvisorParams
 
-    def __init__(self, model: tf.keras.Model | None = None):
-        self._model = model
+    def __init__(self, params: BaseAdvisorParams):
+        if not isinstance(params, self.params_class):
+            raise TypeError(
+                '`params` must be an instance of %s'
+                % self.params_class.__name__,
+            )
+        self.params = params
+        self._model = self.params.prepared_model
 
     def get_model(self):
         raise NotImplementedError
@@ -42,11 +57,19 @@ class BaseAdvisor:
 
     def fit_model(self, epochs: int = 100):
         logger.info('Model is created:\n%s', self.model.summary())
+
+        early_stopping = tf.keras.callbacks.EarlyStopping(
+            monitor='val_loss',
+            patience=5,
+            mode='min',
+        )
+
         history = self.model.fit(
             self.train_features,
             self.train_labels,
             epochs=epochs,
             validation_split=0.2,
+            callbacks=[early_stopping],
         )
         self.plot_loss(history)
         logger.info('Model is trained and loss is plotted.')
