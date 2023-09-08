@@ -95,4 +95,7 @@ if __name__ == '__main__':
                         layers=kwargs.get('layers', 1),
                     ))
             advisor.set_dataset(databuilder.get_data())
-            advisor.train(epochs=int(args[0]) if args else 100)
+            advisor.train(
+                epochs=int(args[0]) if args else 100,
+                add_early_stopping=kwargs.get('early_stopping', True),
+            )

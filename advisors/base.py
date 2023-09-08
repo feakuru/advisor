@@ -1,7 +1,10 @@
-from io import StringIO
+import datetime
 import typing as t
 from dataclasses import dataclass
+from io import StringIO
+
 import numpy as np
+from numpy import typing as np_typing
 
 import pandas as pd
 import tensorflow as tf
@@ -36,13 +39,8 @@ class BaseAdvisor:
             )
         self.params = params
         self._model = self.params.prepared_model
-        self.loss = tf.keras.losses.MeanAbsolutePercentageError()
+        self.loss = tf.keras.losses.MeanAbsoluteError()
         self.optimizer = tf.keras.optimizers.Adamax()
-        self.metrics = [
-            tf.keras.metrics.MeanAbsoluteError(),
-            tf.keras.metrics.MeanAbsolutePercentageError(),
-            tf.keras.metrics.KLDivergence(),
-        ]
 
     @property
     def model(self) -> tf.keras.Model:
@@ -55,40 +53,80 @@ class BaseAdvisor:
             *self.get_preprocessing_layers(),
             *self.get_model_layers()
         ])
+        model.build(self.train_features.shape)
         model.compile(
             loss=self.loss,
             optimizer=self.optimizer,
-            metrics=self.metrics,
         )
         return model
 
     def get_preprocessing_layers(self):
         normalizer = tf.keras.layers.Normalization()
         normalizer.adapt(np.array(self.train_features))
-        return normalizer
+        return [normalizer]
 
     def get_model_layers(self):
         raise NotImplementedError
 
-    def plot_history(self, history):
+    def plot_history(
+        self,
+        history: tf.keras.callbacks.History,
+        plot_label_prefix: str = '',
+    ):
         figure = go.Figure()
-        for metric in self.metrics:
-            figure.add_trace(go.Scatter(
-                y=history.history[metric.name],
-                name=' '.join(
-                    name.capitalize()
-                    for name in metric.name.split('_')
-                )
-            ))
+        figure.add_trace(go.Scatter(
+            y=history.history['loss'],
+            name='Training loss',
+        ))
+        figure.add_trace(go.Scatter(
+            y=history.history['val_loss'],
+            name='Validation loss',
+        ))
         figure.update_layout(
-            title_text=f'{self.__class__.__name__} training history',
+            title=dict(
+                text=f'{plot_label_prefix}: training history',
+                x=0.5,
+            ),
             showlegend=True,
             legend=dict(
                 title='Historical metrics',
-                yref='container',
-                y=0.9,
-                xref='container',
-                x=0.8,
+                orientation='h',
+                yanchor='bottom',
+                xanchor='left',
+                x=0,
+                y=1,
+            )
+        )
+        figure.show()
+
+    def plot_predictions(
+        self,
+        predictions: np_typing.NDArray[t.Any],
+        actual_values: np_typing.NDArray[t.Any],
+        plot_label_prefix: str = '',
+    ):
+        figure = go.Figure()
+        figure.add_trace(go.Scatter(
+            y=actual_values,
+            name='Actual values',
+        ))
+        figure.add_trace(go.Scatter(
+            y=predictions.flatten(),
+            name='Predictions',
+        ))
+        figure.update_layout(
+            title=dict(
+                text=f'{plot_label_prefix}: predictions',
+                x=0.5,
+            ),
+            showlegend=True,
+            legend=dict(
+                title='Data',
+                orientation='h',
+                yanchor='bottom',
+                xanchor='left',
+                x=0,
+                y=1,
             )
         )
         figure.show()
@@ -104,23 +142,26 @@ class BaseAdvisor:
         summary_buffer.seek(0)
         return summary_buffer.read()
 
-    def fit_model(self, epochs: int = 100):
+    def fit_model(self, epochs: int = 100, add_early_stopping: bool = True):
         logger.info('Fitting model:\n%s', self.get_model_summary())
-        early_stopping = tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss',
-            patience=5,
-            mode='min',
-        )
+        callbacks = []
+        if add_early_stopping:
+            callbacks.append(tf.keras.callbacks.EarlyStopping(
+                monitor='val_loss',
+                patience=12,
+                mode='min',
+            ))
 
         history = self.model.fit(
             self.train_features,
             self.train_labels,
             epochs=epochs,
             validation_split=0.2,
-            callbacks=[early_stopping],
+            callbacks=callbacks,
         )
-        self.plot_history(history)
-        logger.info('Model is trained and loss is plotted.')
+        logger.info('Model is fitted.')
+
+        return history
 
     def set_dataset(self, dataset: pd.DataFrame):
         self.dataset = dataset.dropna()
@@ -149,16 +190,36 @@ class BaseAdvisor:
 
         self.train_labels = self.train_features.pop('target')
         self.test_labels = self.test_features.pop('target')
-
-    def train(self, epochs: int = 100):
-        self.fit_model(epochs=epochs)
         logger.info(
-            'Evaluation result: %s',
-            dict(zip(
-                (metric.name for metric in self.metrics),
-                self.model.evaluate(
-                    self.test_features,
-                    self.test_labels,
-                ),
-            ))
+            'Loaded data.\n'
+            'Training data stats:\n%s\n'
+            'Test data stats:\n%s\n',
+            self.train_dataset.describe().transpose(),
+            self.test_dataset.describe().transpose(),
+        )
+
+    def train(self, epochs: int = 100, add_early_stopping: bool = True):
+        history = self.fit_model(
+            epochs=epochs,
+            add_early_stopping=add_early_stopping,
+        )
+        plot_label_prefix = (
+            f'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}: '
+            f'{self.__class__.__name__}'
+        )
+        self.plot_history(
+            history=history,
+            plot_label_prefix=plot_label_prefix,
+        )
+        self.plot_predictions(
+            predictions=self.model.predict(self.test_features[:100]),
+            actual_values=self.test_labels[:100],
+            plot_label_prefix=plot_label_prefix,
+        )
+        logger.info(
+            'Loss on test data: %s',
+            self.model.evaluate(
+                self.test_features,
+                self.test_labels,
+            ),
         )
