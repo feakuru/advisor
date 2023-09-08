@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-import numpy as np
+
 import tensorflow as tf
 
 from advisors.base import BaseAdvisor, BaseAdvisorParams
@@ -19,22 +19,13 @@ class DNNAdvisor(BaseAdvisor):
     params: DNNAdvisorParams
     params_class = DNNAdvisorParams
 
-    def get_model(self) -> tf.keras.Model:
-        normalizer = tf.keras.layers.Normalization()
-        normalizer.adapt(np.array(self.train_features))
-
-        layers = [normalizer]
+    def get_model_layers(self):
+        layers = []
         for _ in range(self.params.dense_layer_quantity):
             layers.append(tf.keras.layers.Dense(
                 self.params.dense_layer_density,
                 activation='relu',
             ))
         layers.append(tf.keras.layers.Dense(1))
-        model = tf.keras.Sequential(layers)
 
-        model.compile(
-            optimizer=tf.keras.optimizers.Adamax(learning_rate=0.001),
-            loss='mean_absolute_error',
-        )
-
-        return model
+        return layers

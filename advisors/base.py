@@ -1,5 +1,7 @@
+from io import StringIO
 import typing as t
 from dataclasses import dataclass
+import numpy as np
 
 import pandas as pd
 import tensorflow as tf
@@ -17,6 +19,9 @@ class BaseAdvisorParams:
 
 
 class BaseAdvisor:
+    loss: tf.keras.losses.Loss
+    optimizer: tf.keras.optimizers.Optimizer
+    metrics: t.List[tf.keras.metrics.Metric]
     train_dataset: pd.DataFrame
     test_dataset: pd.DataFrame
     train_features: pd.DataFrame
@@ -31,9 +36,13 @@ class BaseAdvisor:
             )
         self.params = params
         self._model = self.params.prepared_model
-
-    def get_model(self):
-        raise NotImplementedError
+        self.loss = tf.keras.losses.MeanAbsolutePercentageError()
+        self.optimizer = tf.keras.optimizers.Adamax()
+        self.metrics = [
+            tf.keras.metrics.MeanAbsoluteError(),
+            tf.keras.metrics.MeanAbsolutePercentageError(),
+            tf.keras.metrics.KLDivergence(),
+        ]
 
     @property
     def model(self) -> tf.keras.Model:
@@ -41,23 +50,62 @@ class BaseAdvisor:
             self._model = self.get_model()
         return self._model
 
-    def plot_loss(self, history):
-        go.Figure(
-            data=[
-                go.Scatter(
-                    y=history.history['loss'],
-                    name='Loss',
-                ),
-                go.Scatter(
-                    y=history.history['val_loss'],
-                    name='Validation loss',
-                ),
-            ]
-        ).show()
+    def get_model(self) -> tf.keras.Model:
+        model = tf.keras.Sequential([
+            *self.get_preprocessing_layers(),
+            *self.get_model_layers()
+        ])
+        model.compile(
+            loss=self.loss,
+            optimizer=self.optimizer,
+            metrics=self.metrics,
+        )
+        return model
+
+    def get_preprocessing_layers(self):
+        normalizer = tf.keras.layers.Normalization()
+        normalizer.adapt(np.array(self.train_features))
+        return normalizer
+
+    def get_model_layers(self):
+        raise NotImplementedError
+
+    def plot_history(self, history):
+        figure = go.Figure()
+        for metric in self.metrics:
+            figure.add_trace(go.Scatter(
+                y=history.history[metric.name],
+                name=' '.join(
+                    name.capitalize()
+                    for name in metric.name.split('_')
+                )
+            ))
+        figure.update_layout(
+            title_text=f'{self.__class__.__name__} training history',
+            showlegend=True,
+            legend=dict(
+                title='Historical metrics',
+                yref='container',
+                y=0.9,
+                xref='container',
+                x=0.8,
+            )
+        )
+        figure.show()
+
+    def get_model_summary(self) -> str:
+        summary_buffer = StringIO('')
+
+        def _print_to_buffer(arg: str):
+            summary_buffer.write(f'{arg}\n')
+
+        self.model.summary(print_fn=_print_to_buffer)
+
+        summary_buffer.seek(0)
+        return summary_buffer.read()
 
     def fit_model(self, epochs: int = 100):
-        logger.info('Model is created:\n%s', self.model.summary())
-
+        logger.info('Fitting model:\n%s', self.get_model_summary())
         early_stopping = tf.keras.callbacks.EarlyStopping(
             monitor='val_loss',
             patience=5,
@@ -71,7 +119,7 @@ class BaseAdvisor:
             validation_split=0.2,
             callbacks=[early_stopping],
         )
-        self.plot_loss(history)
+        self.plot_history(history)
         logger.info('Model is trained and loss is plotted.')
 
     def set_dataset(self, dataset: pd.DataFrame):
@@ -105,6 +153,12 @@ class BaseAdvisor:
     def train(self, epochs: int = 100):
         self.fit_model(epochs=epochs)
         logger.info(
-            'Evaluation result: %f',
-            self.model.evaluate(self.test_features, self.test_labels),
+            'Evaluation result: %s',
+            dict(zip(
+                (metric.name for metric in self.metrics),
+                self.model.evaluate(
+                    self.test_features,
+                    self.test_labels,
+                ),
+            ))
         )

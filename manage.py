@@ -1,12 +1,7 @@
 import enum
 import sys
 
-from binance import Client
-from advisors.dnn import DNNAdvisorParams
-from advisors.lstm import LSTMAdvisor, LSTMAdvisorParams
-
 from common.utils import get_logger
-from memory_bank.client import MemoryBankClient
 
 
 logger = get_logger('advisor-main')
@@ -65,7 +60,9 @@ if __name__ == '__main__':
             check_targets(log_full_stats=kwargs['--full'])
 
         case ManagementCommands.HISTORY.value:
+            from binance import Client
             from gatherers.fill_memory import get_history
+            from memory_bank.client import MemoryBankClient
 
             memory_bank = MemoryBankClient()
             api_client = Client()
@@ -81,7 +78,9 @@ if __name__ == '__main__':
             MemoryPlotter().get_plot().show()
 
         case ManagementCommands.TRAIN.value:
-            from advisors.dnn import DNNAdvisor
+            from memory_bank.client import MemoryBankClient
+            from advisors.dnn import DNNAdvisor, DNNAdvisorParams
+            from advisors.lstm import LSTMAdvisor, LSTMAdvisorParams
             from databuilders.pd import PandasMemoryDatabuilder
 
             memory_bank = MemoryBankClient()
