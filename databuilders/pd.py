@@ -25,6 +25,8 @@ class PandasMemoryDatabuilder(BaseDatabuilder):
                     for k, v in kline.items()
                     if k not in ['_id']
                 }
+                # TODO can probably optimize by actually
+                # using the generator in tandem with stringio
                 for kline in self.memory_bank.iterate_over_klines()
             ])
         return self.__memory

@@ -24,27 +24,20 @@ if __name__ == '__main__':
         sys.exit(1)
 
     cmd, args = sys.argv[1], sys.argv[2:]
-    try:
-        kwargs = {
-            (kv_pair := arg.split('='))[0][2:]: (
-                True if kv_pair[1].lower() == 'true' else
-                False if kv_pair[1].lower() == 'false' else
-                int(kv_pair[1]) if kv_pair[1].isdigit() else
-                kv_pair[1]
-            )
-            for arg in args
-            if arg.startswith('--')
-        }
-        args = [
-            arg for arg in args
-            if not arg.startswith('--')
-        ]
-    except IndexError:
-        logger.error(
-            'Invalid arguments: make sure to '
-            'specify kwargs only as --key=value'
-        )
-        sys.exit(1)
+    kwargs = {
+        (kv_pair := arg.split('='))[0][2:]: (
+            True if kv_pair[1].lower() == 'true' else
+            False if kv_pair[1].lower() == 'false' else
+            int(kv_pair[1]) if kv_pair[1].isdigit() else
+            kv_pair[1]
+        ) if '=' in arg else True
+        for arg in args
+        if arg.startswith('--')
+    }
+    args = [
+        arg for arg in args
+        if not arg.startswith('--')
+    ]
 
     match cmd:
         case ManagementCommands.ENRICH.value:
@@ -55,9 +48,8 @@ if __name__ == '__main__':
         case ManagementCommands.CHECK.value:
             from gatherers.get_memory_stats import log_memory_stats
             from gatherers.enrich_memory import enrich_memory, check_targets
-
-            log_memory_stats(log_full_stats=kwargs['--full'])
-            check_targets(log_full_stats=kwargs['--full'])
+            log_memory_stats(log_full_stats=kwargs.get('full', False))
+            check_targets(log_full_stats=kwargs.get('full', False))
 
         case ManagementCommands.HISTORY.value:
             from binance import Client
@@ -79,8 +71,6 @@ if __name__ == '__main__':
 
         case ManagementCommands.TRAIN.value:
             from memory_bank.client import MemoryBankClient
-            from advisors.dnn import DNNAdvisor, DNNAdvisorParams
-            from advisors.lstm import LSTMAdvisor, LSTMAdvisorParams
             from databuilders.pd import PandasMemoryDatabuilder
 
             memory_bank = MemoryBankClient()
@@ -88,11 +78,19 @@ if __name__ == '__main__':
 
             match kwargs.get('advisor', 'lstm'):
                 case 'dnn':
+                    from advisors.dnn import (
+                        DNNAdvisor,
+                        DNNAdvisorParams,
+                    )
                     advisor = DNNAdvisor(DNNAdvisorParams(
                         dense_layer_quantity=kwargs.get('layers', 2),
                         dense_layer_density=kwargs.get('density', 24),
                     ))
                 case 'lstm':
+                    from advisors.lstm import (
+                        LSTMAdvisor,
+                        LSTMAdvisorParams,
+                    )
                     advisor = LSTMAdvisor(LSTMAdvisorParams(
                         layers=kwargs.get('layers', 1),
                     ))

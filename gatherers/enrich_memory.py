@@ -18,7 +18,9 @@ def enrich_memory_with_targets(
     updates = {}
     for kline in memory_bank.iterate_over_klines():
         if prev_kline:
-            target = kline['close'] - prev_kline['close']
+            target = (
+                kline['close'] - prev_kline['close']
+            ) / prev_kline['close']
             updates[prev_kline['open_time']] = {'target': target}
         prev_kline = kline
     return updates
@@ -29,31 +31,45 @@ def check_targets(
     memory_bank: MemoryBankClient = MemoryBankClient(),
 ):
     prev_kline = None
+
     we_were_right = 0
     we_were_wrong = 0
+    we_didnt_know = 0
+
     for kline in memory_bank.iterate_over_klines():
-        if prev_kline and prev_kline.get('target') == (
-            kline['close'] - prev_kline['close']
-        ):
-            we_are = 'RIGHT'
-            we_were_right += 1
+        if prev_kline:
+            expected_target = (
+                kline['close'] - prev_kline['close']
+            ) / prev_kline['close']
+
+            if prev_kline.get('target') == expected_target:
+                we_are = 'RIGHT'
+                we_were_right += 1
+            else:
+                we_are = 'WRONG'
+                we_were_wrong += 1
+
+            if log_full_stats:
+                logger.info(
+                    'We are %s (%6.2f vs %6.2f, from %9.2f to %9.2f).',
+                    we_are,
+                    prev_kline.get('target'),
+                    expected_target,
+                    prev_kline['close'],
+                    kline['close'],
+                )
+
         else:
-            we_are = 'WRONG'
-            we_were_wrong += 1
-        if prev_kline and log_full_stats:
-            logger.info(
-                'We are %s (%6.2f vs %6.2f, from %9.2f to %9.2f).',
-                we_are,
-                prev_kline.get('target'),
-                kline['close'] - prev_kline['close'],
-                prev_kline['close'],
-                kline['close'],
-            )
+            we_are = 'N/A'
+            we_didnt_know += 1
+
         prev_kline = kline
+
     logger.info(
-        'We were right %d times, wrong %d times.',
+        'We were right %d times, wrong %d times, didn\'t know %d times.',
         we_were_right,
         we_were_wrong,
+        we_didnt_know,
     )
 
 
