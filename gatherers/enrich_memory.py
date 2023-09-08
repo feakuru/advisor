@@ -18,7 +18,7 @@ def enrich_memory_with_targets(
     updates = {}
     for kline in memory_bank.iterate_over_klines():
         if prev_kline:
-            target = (
+            target = 1000 * (
                 kline['close'] - prev_kline['close']
             ) / prev_kline['close']
             updates[prev_kline['open_time']] = {'target': target}
@@ -38,7 +38,9 @@ def check_targets(
 
     for kline in memory_bank.iterate_over_klines():
         if prev_kline:
-            expected_target = (
+            # TODO scale targets by some constant factor
+            # that should not ever change for a symbol
+            expected_target = 1000 * (
                 kline['close'] - prev_kline['close']
             ) / prev_kline['close']
 
