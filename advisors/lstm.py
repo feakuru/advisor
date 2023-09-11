@@ -25,13 +25,14 @@ class LSTMAdvisor(BaseAdvisor):
     def get_model_layers(self) -> t.List[tf.keras.layers.Layer]:
         layers = []
 
-        for _ in range(self.params.layers):
-            layers.append(
-                tf.keras.layers.LSTM(
-                    100,
-                    input_shape=(self.train_features.shape[1], 1),
-                ),
-            )
+        lstm_layer_kwargs = [
+            {'input_shape': (self.train_features.shape[1], 1)}
+        ]
+        for _ in range(self.params.layers - 1):
+            lstm_layer_kwargs[-1]['return_sequences'] = True
+            lstm_layer_kwargs.append({})
+        for kwargs in lstm_layer_kwargs:
+            layers.append(tf.keras.layers.LSTM(24, **kwargs))
         layers.append(tf.keras.layers.Dense(1))
 
         return layers
