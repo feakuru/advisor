@@ -9,6 +9,7 @@ logger = get_logger('gatherer-enrich')
 
 
 UpdatesType = t.Dict[str, t.Dict[str, t.Any]]
+TARGET_SCALE_FACTOR = 100000
 
 
 def enrich_memory_with_targets(
@@ -18,7 +19,7 @@ def enrich_memory_with_targets(
     updates = {}
     for kline in memory_bank.iterate_over_klines():
         if prev_kline:
-            target = 1000 * (
+            target = TARGET_SCALE_FACTOR * (
                 kline['close'] - prev_kline['close']
             ) / prev_kline['close']
             updates[prev_kline['open_time']] = {'target': target}
@@ -38,9 +39,15 @@ def check_targets(
 
     for kline in memory_bank.iterate_over_klines():
         if prev_kline:
+            if prev_kline['open_time'] > kline['open_time']:
+                logger.error(
+                    'Order irregularity detected: %s > %s',
+                    prev_kline['open_time'],
+                    kline['open_time'],
+                )
             # TODO scale targets by some constant factor
             # that should not ever change for a symbol
-            expected_target = 1000 * (
+            expected_target = TARGET_SCALE_FACTOR * (
                 kline['close'] - prev_kline['close']
             ) / prev_kline['close']
 
