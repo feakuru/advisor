@@ -109,10 +109,22 @@ class BaseAdvisor:
         figure.add_trace(go.Scatter(
             y=actual_values,
             name='Actual values',
+            mode='markers',
+            marker=dict(
+                color='green',
+                symbol='circle',
+                size=12,
+            ),
         ))
         figure.add_trace(go.Scatter(
             y=predictions.flatten(),
             name='Predictions',
+            mode='markers',
+            marker=dict(
+                color='black',
+                symbol='x',
+                size=12,
+            ),
         ))
         figure.update_layout(
             title=dict(
