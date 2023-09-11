@@ -28,7 +28,7 @@ def get_logger(name):
     handler = logging.StreamHandler()
     handler.setFormatter(
         logging.Formatter(
-            '[%(levelname)6s:%(name)-13s]: %(message)s',
+            '%(asctime)s [%(levelname)6s:%(name)-13s]: %(message)s',
         ),
     )
     logger.addHandler(handler)

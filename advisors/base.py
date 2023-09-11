@@ -109,7 +109,7 @@ class BaseAdvisor:
         figure.add_trace(go.Scatter(
             y=actual_values,
             name='Actual values',
-            mode='markers',
+            mode='lines+markers',
             marker=dict(
                 color='green',
                 symbol='circle',
@@ -175,7 +175,7 @@ class BaseAdvisor:
 
         return history
 
-    def set_dataset(self, dataset: pd.DataFrame):
+    def set_dataset(self, dataset: pd.DataFrame, sequence_length: int = 26):
         self.dataset = dataset.dropna()
 
         for unneeded_key in [
@@ -194,6 +194,42 @@ class BaseAdvisor:
         ]:
             self.dataset.pop(unneeded_key)
 
+        logger.info(
+            'Loaded dataset.\n'
+            'Data sample:\n%s\n'
+            'Data stats:\n%s\n',
+            self.dataset[:7],
+            self.dataset.describe().transpose(),
+        )
+
+        logger.info('Windowing dataset. This might take a minute...')
+
+        result_list = []
+        for idx, _ in enumerate(self.dataset.values[sequence_length:]):
+            windowed_values = self.dataset.values[idx - sequence_length:idx]
+            windowed_values = [
+                {
+                    (f'{k}_{idx}' if k != 'target' else k): v
+                    for k, v in zip(self.dataset.keys(), windowed_value)
+                    if k != 'target' or idx == (len(windowed_values) - 1)
+                }
+                for idx, windowed_value in enumerate(windowed_values)
+            ]
+            result = {}
+            for value in windowed_values:
+                result.update(value)
+            result_list.append(result)
+        self.dataset = pd.DataFrame.from_dict(result_list)
+        self.dataset = self.dataset.dropna()
+
+        logger.info(
+            'Windowed dataset.\n'
+            'Data sample:\n%s\n'
+            'Data stats:\n%s\n',
+            self.dataset[:7],
+            self.dataset.describe().transpose(),
+        )
+
         self.train_dataset = self.dataset.sample(frac=0.8, random_state=0)
         self.test_dataset = self.dataset.drop(self.train_dataset.index)
 
@@ -204,9 +240,13 @@ class BaseAdvisor:
         self.test_labels = self.test_features.pop('target')
         logger.info(
             'Loaded data.\n'
+            'Training data sample:\n%s\n'
             'Training data stats:\n%s\n'
+            'Test data sample:\n%s\n'
             'Test data stats:\n%s\n',
+            self.train_dataset[:7],
             self.train_dataset.describe().transpose(),
+            self.test_dataset[:7],
             self.test_dataset.describe().transpose(),
         )
 
